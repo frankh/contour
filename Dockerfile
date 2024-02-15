@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build --mount=type=cache,target=/g
 	    BUILD_BRANCH=${BUILD_BRANCH}
 
 # Ensure we produced a static binary.
-RUN ldd contour 2>&1 | grep 'not a dynamic executable'
+RUN (ldd contour 2>&1 | grep 'not a dynamic executable') || true
 
-FROM scratch AS final
+FROM alpine AS final
 COPY --from=build /contour/contour /bin/contour

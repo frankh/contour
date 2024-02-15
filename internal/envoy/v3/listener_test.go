@@ -21,6 +21,7 @@ import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_compression_gzip_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
+	envoy_filter_http_buffer_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/buffer/v3"
 	envoy_filter_http_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	envoy_filter_http_cors_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	envoy_filter_http_grpc_stats_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
@@ -639,6 +640,13 @@ func TestHTTPConnectionManager(t *testing.T) {
 			Name: RBACFilterName,
 			ConfigType: &envoy_filter_network_http_connection_manager_v3.HttpFilter_TypedConfig{
 				TypedConfig: protobuf.MustMarshalAny(&envoy_filter_http_rbac_v3.RBAC{}),
+			},
+		}, {
+			Name: BufferFilterName,
+			ConfigType: &envoy_filter_network_http_connection_manager_v3.HttpFilter_TypedConfig{
+				TypedConfig: protobuf.MustMarshalAny(&envoy_filter_http_buffer_v3.Buffer{
+					MaxRequestBytes: protobuf.UInt32OrNil(1000000),
+				}),
 			},
 		}, {
 			Name: "router",
@@ -1828,6 +1836,15 @@ func TestAddFilter(t *testing.T) {
 		},
 	}
 
+	bufferFilter := &envoy_filter_network_http_connection_manager_v3.HttpFilter{
+		Name: BufferFilterName,
+		ConfigType: &envoy_filter_network_http_connection_manager_v3.HttpFilter_TypedConfig{
+			TypedConfig: protobuf.MustMarshalAny(&envoy_filter_http_buffer_v3.Buffer{
+				MaxRequestBytes: protobuf.UInt32OrNil(1000000),
+			}),
+		},
+	}
+
 	tests := map[string]struct {
 		builder *httpConnectionManagerBuilder
 		add     *envoy_filter_network_http_connection_manager_v3.HttpFilter
@@ -1870,6 +1887,7 @@ func TestAddFilter(t *testing.T) {
 				localRateLimitFilter,
 				luaFilter,
 				rbacFilter,
+				bufferFilter,
 				authzFilter(),
 				routerFilter,
 			},
@@ -1889,6 +1907,7 @@ func TestAddFilter(t *testing.T) {
 				localRateLimitFilter,
 				luaFilter,
 				rbacFilter,
+				bufferFilter,
 				authzFilter("ext-auth-server.com", &dag.AuthorizationServerBufferSettings{
 					MaxRequestBytes:     10,
 					AllowPartialMessage: true,

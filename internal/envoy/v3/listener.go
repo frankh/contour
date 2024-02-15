@@ -24,6 +24,7 @@ import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_compression_gzip_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/compression/gzip/compressor/v3"
+	envoy_filter_http_buffer_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/buffer/v3"
 	envoy_filter_http_compressor_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	envoy_filter_http_cors_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	envoy_filter_http_ext_authz_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
@@ -155,6 +156,7 @@ func Listener(name, address string, port int, perConnectionBufferLimitBytes *uin
 }
 
 const (
+	BufferFilterName          string = "envoy.filters.http.buffer"
 	CORSFilterName            string = "envoy.filters.http.cors"
 	LocalRateLimitFilterName  string = "envoy.filters.http.local_ratelimit"
 	GlobalRateLimitFilterName string = "envoy.filters.http.ratelimit"
@@ -387,6 +389,14 @@ func (b *httpConnectionManagerBuilder) DefaultFilters() *httpConnectionManagerBu
 			Name: RBACFilterName,
 			ConfigType: &envoy_filter_network_http_connection_manager_v3.HttpFilter_TypedConfig{
 				TypedConfig: protobuf.MustMarshalAny(&envoy_filter_http_rbac_v3.RBAC{}),
+			},
+		},
+		&envoy_filter_network_http_connection_manager_v3.HttpFilter{
+			Name: BufferFilterName,
+			ConfigType: &envoy_filter_network_http_connection_manager_v3.HttpFilter_TypedConfig{
+				TypedConfig: protobuf.MustMarshalAny(&envoy_filter_http_buffer_v3.Buffer{
+					MaxRequestBytes: protobuf.UInt32OrNil(22020096), // 21MB buffer
+				}),
 			},
 		},
 		&envoy_filter_network_http_connection_manager_v3.HttpFilter{
